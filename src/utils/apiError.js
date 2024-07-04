@@ -1,15 +1,15 @@
 class APIError extends Error {
   constructor(
-    message = "Internal Server Error",
     statusCode,
+    message = "Internal Server Error",
     error = [],
     stack = ""
   ) {
-    super(message); //to override methods of parent class
+    super(message); // to override methods of the parent class
     this.statusCode = statusCode;
     this.data = null;
     this.message = message;
-    this.sucess = false;
+    this.success = false; // corrected typo
     this.error = error;
 
     if (stack) {

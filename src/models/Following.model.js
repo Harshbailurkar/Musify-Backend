@@ -1,17 +1,20 @@
-import mongoose, { Schema } from "mongoose";
+import mongoose from "mongoose";
+const { Schema } = mongoose;
 
 const FollowingSchema = new Schema(
   {
     followers: {
-      type: Schema.types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: "User",
     },
     following: {
-      type: Schema.types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: "User",
     },
   },
   { timestamps: true }
 );
 
-export const Following = mongoose.model("Following", FollowingSchema);
+const Following = mongoose.model("Following", FollowingSchema);
+
+export default Following;

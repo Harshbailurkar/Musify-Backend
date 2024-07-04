@@ -7,6 +7,7 @@ import {
 } from "../utils/cloudinary.js";
 import { APIResponse } from "../utils/apiResponce.js";
 import { Like } from "../models/like.model.js";
+import { User } from "../models/user.model.js";
 const getAllSongs = asyncHandler(async (req, res) => {
   const { pageNo } = req.params;
   console.log(pageNo);
@@ -308,6 +309,89 @@ const getSongByMostLiked = asyncHandler(async (req, res) => {
       new APIResponse(200, songs, "Songs with most likes fetched successfully")
     );
 });
+const searchSongs = asyncHandler(async (req, res) => {
+  const { query } = req.query;
+
+  if (!query) {
+    return res
+      .status(400)
+      .json(new APIResponse(400, [], "Query parameter is required", false));
+  }
+
+  let searchCriteria = {
+    $or: [
+      { title: { $regex: query, $options: "i" } },
+      { artist: { $regex: query, $options: "i" } },
+      { owner: { $regex: query, $options: "i" } },
+      { album: { $regex: query, $options: "i" } },
+      { genre: { $regex: query, $options: "i" } },
+      { language: { $regex: query, $options: "i" } },
+    ],
+  };
+
+  const resultSongs = await Song.find(searchCriteria);
+
+  const channels = await User.aggregate([
+    {
+      $match: {
+        $or: [
+          { username: { $regex: query, $options: "i" } },
+          { fullName: { $regex: query, $options: "i" } },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        from: "followings",
+        localField: "_id",
+        foreignField: "following",
+        as: "followers",
+      },
+    },
+    {
+      $lookup: {
+        from: "followings",
+        localField: "_id",
+        foreignField: "followers",
+        as: "following",
+      },
+    },
+    {
+      $addFields: {
+        followerCount: { $size: "$followers" },
+        followingCount: { $size: "$following" },
+        isfollowed: {
+          $cond: {
+            if: { $in: [req.user?._id, "$followers.followers"] },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        fullName: 1,
+        avatar: 1,
+        username: 1,
+        followerCount: 1,
+        followingCount: 1,
+        isfollowed: 1,
+      },
+    },
+  ]);
+
+  return res
+    .status(200)
+    .json(
+      new APIResponse(
+        200,
+        { songs: resultSongs, channels },
+        "Songs and artist profiles fetched successfully",
+        true
+      )
+    );
+});
 
 export {
   getAllSongs,
@@ -323,4 +407,5 @@ export {
   getSongByArtist,
   getSongByOwner,
   getSongByMostLiked,
+  searchSongs,
 };

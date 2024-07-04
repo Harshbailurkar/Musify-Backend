@@ -5,216 +5,203 @@ import {
   uploadOnCloudinary,
   deleteImagefromCloudinary,
 } from "../utils/cloudinary.js";
-import { APIResponse } from "../utils/apiResponce.js";
+import { APIResponse } from "../utils/apiResponce.js"; // Corrected import
 import jwt from "jsonwebtoken";
-import mongoose from "mongoose";
+import Following from "../models/Following.model.js";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
     const user = await User.findById(userId);
+    if (!user) {
+      throw new APIError(404, "User not found");
+    }
+
     const accessToken = await user.generateAccessToken();
     const refreshToken = await user.generateRefreshToken();
+
     user.refreshToken = refreshToken;
     await user.save({ validateBeforeSave: false });
 
     return { accessToken, refreshToken };
   } catch (err) {
-    console.log(err);
-    throw new APIError(
-      500,
-      "something went rong while generating refresh and access token"
-    );
+    console.error("Error generating tokens:", err);
+    throw new APIError(500, "Failed to generate tokens");
   }
 };
 
 const registerUser = asyncHandler(async (req, res, next) => {
-  console.log(req.body);
-  console.log(req.files);
   const { username, email, password, fullName } = req.body;
 
-  if (!username && !email && !password && !fullName) {
-    throw new APIError("Please provide all fields", 400);
+  if (!username || !email || !password || !fullName) {
+    throw new APIError(400, "Please provide all fields");
   }
-  const userexits = await User.findOne({
-    $or: [{ username: username }, { email: email }],
-  });
-  if (userexits) {
-    throw new APIError("User already exists", 400);
+
+  const userExists = await User.findOne({ $or: [{ username }, { email }] });
+  if (userExists) {
+    throw new APIError(400, "User already exists");
   }
-  let avatarLocalPath = req.files?.avatar;
-  if (req.files?.avatar !== undefined) {
-    avatarLocalPath = req.files?.avatar[0]?.path;
-  }
+
   let avatar = null;
-  if (typeof avatarLocalPath === "string" && avatarLocalPath.trim() !== "") {
+  if (req.files?.avatar) {
+    const avatarLocalPath = req.files.avatar[0].path;
     avatar = await uploadOnCloudinary(avatarLocalPath);
   }
 
-  const user = await User.create({
-    username: username,
-    email: email,
-    fullName: fullName,
-    password: password,
+  const newUser = await User.create({
+    username,
+    email,
+    fullName,
+    password,
     avatar: avatar?.url,
   });
 
-  const createdUser = await User.findById(user._id).select(
+  const createdUser = await User.findById(newUser._id).select(
     "-password -refreshToken"
   );
-
   if (!createdUser) {
-    throw new APIError("Failed to create user", 500);
+    throw new APIError(500, "Failed to create user");
   }
 
   return res.status(201).json(new APIResponse(201, createdUser));
 });
+
 const loginUser = asyncHandler(async (req, res, next) => {
-  //req-body = data
-  //username or email, password
-  //find the user
-  //validate the user
-  //acess and refresh token creation
-  //send cokkies
-  //send res
   const { usernameOremail, password } = req.body;
-  console.log(usernameOremail);
-  if (!usernameOremail) {
-    throw new APIError("Username or Email is Required", 400);
-  }
+  console.log(usernameOremail, password);
   const user = await User.findOne({
     $or: [{ username: usernameOremail }, { email: usernameOremail }],
   });
-  console.log("Login user : " + user);
+  console.log(user);
   if (!user) {
-    throw new APIError("user not found", 404);
+    throw new APIError(404, "User not found");
   }
-  const isPasswordValid = await user.matchPassword(password);
 
+  const isPasswordValid = await user.matchPassword(password);
   if (!isPasswordValid) {
-    throw new APIError("Incorrect Password", 401);
+    throw new APIError(400, "Incorrect Password");
   }
+
   const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
     user._id
   );
-  // to get user becoz upper user has emplty refresh token and has field of password.
   const loggedInUser = await User.findById(user._id)
     .select("-password -refreshToken")
     .lean();
 
-  const options = {
-    //becoz of these cookies only modified by server only.
+  const tokenOptions = {
     httpOnly: true,
-    //secure: true,
+    secure: true,
     sameSite: "Lax",
+    path: "/",
   };
-  // req.user = user;    check this when frontend is completed
+
   return res
     .status(200)
-    .cookie("accessToken", accessToken, options)
-    .cookie("refreshToken", refreshToken, options)
+    .cookie("accessToken", accessToken, tokenOptions)
+    .cookie("refreshToken", refreshToken, tokenOptions)
+    .cookie("username", user.username, { sameSite: "Lax", path: "/" })
+    .cookie("userId", user._id.toString(), { sameSite: "Lax", path: "/" })
     .json(
       new APIResponse(
         200,
-        {
-          //data
-          user: loggedInUser,
-          accessToken,
-          refreshToken,
-        },
-        "user logged in successfully"
+        { user: loggedInUser, accessToken, refreshToken },
+        "User logged in successfully"
       )
     );
 });
 
 const logoutUser = asyncHandler(async (req, res, next) => {
-  await User.findByIdAndUpdate(
+  const user = await User.findByIdAndUpdate(
     req.user._id,
-    {
-      $unset: {
-        refreshToken: 1, // remove foeld from ducument
-      },
-    },
-    {
-      new: true,
-    }
+    { $unset: { refreshToken: 1 } },
+    { new: true }
   );
-  const options = {
+  if (!user) {
+    throw new APIError(500, "Failed to log out user");
+  }
+
+  const cookieOptions = {
     httpOnly: true,
     secure: true,
+    sameSite: "Lax",
+    path: "/",
   };
+
   return res
     .status(200)
-    .clearCookie("accessToken", options)
-    .clearCookie("refreshToken", options)
-    .json(new APIResponse(200, null, "user logged out successfully"));
+    .clearCookie("accessToken", cookieOptions)
+    .clearCookie("refreshToken", cookieOptions)
+    .clearCookie("username", { sameSite: "Lax", path: "/" })
+    .clearCookie("userId", { sameSite: "Lax", path: "/" })
+    .json(new APIResponse(200, null, "User logged out successfully"));
 });
 
 const refreshAccessToken = asyncHandler(async (req, res, next) => {
   const incomingRefreshToken =
     req.cookies.refreshToken || req.body.refreshToken;
-
   if (!incomingRefreshToken) {
-    throw new APIError(301, "unathorised Request! login again");
+    throw new APIError(401, "Unauthorized request! Login again");
   }
+
   try {
     const decodedToken = jwt.verify(
       incomingRefreshToken,
       process.env.REFRESH_TOKEN_SECRET
     );
-
     const user = await User.findById(decodedToken._id);
-    if (!user) {
-      throw new APIError(301, "Invalid Refresh Token");
+
+    if (!user || incomingRefreshToken !== user.refreshToken) {
+      throw new APIError(401, "Invalid refresh token");
     }
 
-    if (incomingRefreshToken !== user?.refreshToken) {
-      throw new APIError(301, "Refresh token is expired or used!! login again");
-    }
-
-    const options = {
-      httpOnly: true,
-      secure: true,
-    };
     const { accessToken, newRefreshToken } =
       await generateAccessAndRefreshToken(user._id);
 
-    res
+    const tokenOptions = {
+      httpOnly: true,
+      secure: true,
+      sameSite: "Lax",
+      path: "/",
+    };
+
+    return res
       .status(200)
-      .cookie("accessToken", accessToken, options)
-      .cookie("refreshToken", newRefreshToken, options)
+      .cookie("accessToken", accessToken, tokenOptions)
+      .cookie("refreshToken", newRefreshToken, tokenOptions)
       .json(
         new APIResponse(
           200,
-          {
-            accessToken,
-            refreshToken: newRefreshToken,
-          },
-          "AcessToken Refreshed"
+          { accessToken, refreshToken: newRefreshToken },
+          "Access Token Refreshed"
         )
       );
   } catch (error) {
-    console.log(error);
-    throw new APIError(301, error?.message || "Invalid refresh Token");
+    console.error("Error refreshing access token:", error.message);
+    throw new APIError(401, error.message || "Invalid refresh token");
   }
 });
 
 const changeCurrentPassword = asyncHandler(async (req, res) => {
-  const { oldPassword, newPassword, confPassword } = req.body;
-  console.log("change password " + oldPassword, newPassword, confPassword);
-  if (!oldPassword || !newPassword || !confPassword) {
-    throw new APIError(400, {}, "All Fields are required");
+  const { oldPassword, newPassword, confirmPassword } = req.body;
+
+  if (!oldPassword || !newPassword || !confirmPassword) {
+    throw new APIError(400, "All fields are required");
   }
-  if (newPassword !== confPassword) {
-    throw new APIError(400, "cant match password");
+
+  if (newPassword !== confirmPassword) {
+    throw new APIError(400, "Passwords do not match");
   }
 
   const userId = req.user?._id;
   const user = await User.findById(userId);
 
-  const isPasswordCorrect = await user.matchPassword(oldPassword);
+  if (!user) {
+    throw new APIError(404, "User not found");
+  }
 
+  const isPasswordCorrect = await user.matchPassword(oldPassword);
   if (!isPasswordCorrect) {
-    throw new APIError(400, "Invalid Password");
+    throw new APIError(400, "Invalid password");
   }
 
   user.password = newPassword;
@@ -222,79 +209,135 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new APIResponse(200, {}, "password Change Successfully"));
+    .json(new APIResponse(200, {}, "Password changed successfully"));
 });
 
 const getCurrentUser = asyncHandler(async (req, res, next) => {
-  console.log("GetUser " + req.user);
   return res
     .status(200)
-    .json(new APIResponse(200, req.user, "current user fetched successfully"));
+    .json(new APIResponse(200, req.user, "Current user fetched successfully"));
 });
 
 const updateAccountDetails = asyncHandler(async (req, res, next) => {
   const { fullName, email } = req.body;
+
   if (!fullName || !email) {
-    throw new APIError(400, "All Fileds are reqired");
+    throw new APIError(400, "All fields are required");
   }
+
   const user = await User.findByIdAndUpdate(
     req.user?._id,
-    {
-      $set: {
-        fullName,
-        email,
-      },
-    },
+    { $set: { fullName, email } },
     { new: true }
   ).select("-password");
+
+  if (!user) {
+    throw new APIError(404, "User not found");
+  }
+
   return res
     .status(200)
-    .json(new APIResponse(200, user, "account details updated successfully"));
+    .json(new APIResponse(200, user, "Account details updated successfully"));
 });
 
 const updateUserAvatar = asyncHandler(async (req, res, next) => {
-  const oldAvatarToBeDelete = req.user?.avatar;
-  if (!oldAvatarToBeDelete) {
-    throw new APIError(400, "error while getting the avatar image");
+  const oldAvatar = req.user?.avatar;
+  if (!oldAvatar) {
+    throw new APIError(400, "Error while getting the avatar image");
   }
-  const deleteAvatar = await deleteImagefromCloudinary(oldAvatarToBeDelete);
+
+  const deleteAvatar = await deleteImagefromCloudinary(oldAvatar);
   if (!deleteAvatar) {
-    throw new APIError(400, " error while deleting the old Avatar");
+    throw new APIError(400, "Error while deleting the old avatar");
   }
 
   const avatarLocalPath = req.file?.path;
-
   if (!avatarLocalPath) {
-    throw new APIError(400, "avatar file not found");
+    throw new APIError(400, "Avatar file not found");
   }
 
-  const avatar = await uploadOnCloudinary(avatarLocalPath);
-
-  if (!avatar.url) {
-    throw new APIError(400, "Error while updating avatar ");
+  const newAvatar = await uploadOnCloudinary(avatarLocalPath);
+  if (!newAvatar.url) {
+    throw new APIError(400, "Error while updating avatar");
   }
 
   const user = await User.findByIdAndUpdate(
     req.user?._id,
-    {
-      $set: {
-        avatar: avatar.url,
-      },
-    },
+    { $set: { avatar: newAvatar.url } },
     { new: true }
   );
+  if (!user) {
+    throw new APIError(404, "User not found");
+  }
 
   return res
     .status(200)
-    .json(new APIResponse(200, user, "Avatar Updated Successfuly"));
+    .json(new APIResponse(200, user, "Avatar updated successfully"));
 });
 
+const followUser = asyncHandler(async (req, res) => {
+  const { channelId } = req.params;
+  const followerId = req.user._id;
+
+  try {
+    const existingFollow = await Following.findOne({
+      followers: followerId,
+      following: channelId,
+    });
+    if (existingFollow) {
+      throw new APIError(400, "User is already following this channel/user");
+    }
+
+    const follow = new Following({
+      followers: followerId,
+      following: channelId,
+    });
+    await follow.save();
+    console.log(`User ${followerId} is now following user ${channelId}`);
+    return res
+      .status(200)
+      .json(new APIResponse(200, {}, "User followed successfully"));
+  } catch (error) {
+    console.error("Error following user:", error.message);
+    throw new APIError(
+      error.status || 500,
+      error.message || "Failed to follow user"
+    );
+  }
+});
+
+const unfollowUser = asyncHandler(async (req, res) => {
+  const { channelId } = req.params;
+  const followerId = req.user._id;
+
+  try {
+    const result = await Following.deleteOne({
+      followers: followerId,
+      following: channelId,
+    });
+    if (!result.deletedCount) {
+      throw new APIError(400, "User is not following this channel/user");
+    }
+
+    console.log(`User ${followerId} unfollowed user ${channelId}`);
+    return res
+      .status(200)
+      .json(new APIResponse(200, {}, "User unfollowed successfully"));
+  } catch (error) {
+    console.error("Error unfollowing user:", error.message);
+    throw new APIError(
+      error.status || 500,
+      error.message || "Failed to unfollow user"
+    );
+  }
+});
 const getUserProfile = asyncHandler(async (req, res) => {
   const { username } = req.params;
-  console.log(username);
+
   if (!username?.trim()) {
-    throw new APIError(400, "username is missing");
+    throw new APIError(400, "Username is missing");
   }
+
   const channel = await User.aggregate([
     {
       $match: {
@@ -325,12 +368,8 @@ const getUserProfile = asyncHandler(async (req, res) => {
         followingCount: {
           $size: "$following",
         },
-        isfollowed: {
-          $cond: {
-            if: { $in: [req.user?._id, "$followers.followers"] },
-            then: true,
-            else: false,
-          },
+        isFollowed: {
+          $in: [req.user?._id, "$followers.followers"],
         },
       },
     },
@@ -341,66 +380,41 @@ const getUserProfile = asyncHandler(async (req, res) => {
         username: 1,
         followerCount: 1,
         followingCount: 1,
-        isfollowed: 1,
+        isFollowed: 1,
       },
     },
   ]);
-  console.log(channel);
 
   if (!channel?.length) {
-    throw new APIError(404, "Channel does not exits");
+    throw new APIError(404, "Channel does not exist");
   }
+
   return res
     .status(200)
-    .json(new APIResponse(200, channel[0], "user channel fetch successfully"));
+    .json(
+      new APIResponse(200, channel[0], "User channel fetched successfully")
+    );
 });
-{
-  // const getLikedSongs = asyncHandler(async (req, res) => {
-  //   const user = await User.aggregate([
-  //     {
-  //       $match: {
-  //         _id: new mongoose.Types.ObjectId(req.user_id),
-  //       },
-  //     },
-  //     {
-  //       $lookup: {
-  //         from: "songs",
-  //         localField: "likedSongs",
-  //         foreignField: "_id",
-  //         as: "likedSongs",
-  //         pipeline: [
-  //           {
-  //             $lookup: {
-  //               from: "users",
-  //               localField: "artist",
-  //               foreignField: "_id",
-  //               as: "artist",
-  //               pipeline: [
-  //                 {
-  //                   $project: {
-  //                     fullName: 1,
-  //                     avatar: 1,
-  //                   },
-  //                 },
-  //               ],
-  //             },
-  //           },
-  //           {
-  //             $addFields: {
-  //               artist: {
-  //                 $first: "$artist",
-  //               },
-  //             },
-  //           },
-  //         ],
-  //       },
-  //     },
-  //   ]);
-  //   return res
-  //     .status(200)
-  //     .json(new APIResponse(200, user, "liked songs fetched successfully"));
-  // });
-}
+const getFollowedAccounts = async (req, res) => {
+  try {
+    const userId = req.user._id; // Assuming the user ID is available in req.user
+
+    // Find the documents where the user is following others
+    const followedAccounts = await Following.find({
+      followers: userId,
+    }).populate("following");
+
+    // Extract the followed user information
+    const followedUsers = followedAccounts.map((account) => account.following);
+
+    res.json({ followedUsers });
+  } catch (error) {
+    console.error("Error fetching followed accounts:", error);
+    res
+      .status(500)
+      .json({ message: "Server error while fetching followed accounts" });
+  }
+};
 export {
   registerUser,
   loginUser,
@@ -410,6 +424,8 @@ export {
   getCurrentUser,
   updateAccountDetails,
   updateUserAvatar,
+  followUser,
+  unfollowUser,
   getUserProfile,
-  //  getLikedSongs,
+  getFollowedAccounts,
 };

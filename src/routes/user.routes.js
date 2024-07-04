@@ -9,6 +9,9 @@ import {
   updateAccountDetails,
   updateUserAvatar,
   getUserProfile,
+  followUser,
+  unfollowUser,
+  getFollowedAccounts,
   // getLikedSongs,
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
@@ -47,6 +50,8 @@ router
   .patch(verifyJWT, upload.single("avatar"), updateUserAvatar);
 
 router.route("/c/:username").get(verifyJWT, getUserProfile);
-
+router.post("/follow/:channelId", verifyJWT, followUser);
+router.post("/unfollow/:channelId", verifyJWT, unfollowUser);
+router.get("/followed-channels", verifyJWT, getFollowedAccounts);
 // router.route("/likedsongs").get(verifyJWT, getLikedSongs);
 export default router;

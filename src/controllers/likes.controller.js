@@ -49,9 +49,10 @@ const getLikedSong = asyncHandler(async (req, res) => {
     likedBy: req.user._id,
     song: { $exists: true },
   }).populate("song"); // Populate the 'song' field to get the associated songs
-
+  if (!allLikes) {
+    return new APIError(501, "Error while fetching the slike song");
+  }
   const likedSongs = allLikes.map((like) => like.song); // Extract the songs from the likes
-
   return res
     .status(200)
     .json(new APIResponse(200, likedSongs, "Liked songs fetched successfully"));

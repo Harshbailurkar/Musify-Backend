@@ -13,12 +13,13 @@ import {
   getSongByArtist,
   getSongByOwner,
   getSongByMostLiked,
+  searchSongs,
 } from "../controllers/song.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
 const router = Router();
 
-router.route("/:pageNo").get(verifyJWT, getAllSongs);
+router.route("/search").get(verifyJWT, searchSongs);
 
 router.route("/type/:genre").get(verifyJWT, getSongByGenre);
 
@@ -31,8 +32,7 @@ router.route("/album/:album").get(verifyJWT, getSongByAlbum);
 router.route("/artist/:artist").get(verifyJWT, getSongByArtist);
 
 router.route("/owner/:owner").get(verifyJWT, getSongByOwner);
-
-router.route("/");
+router.route("/:pageNo").get(verifyJWT, getAllSongs);
 
 router.route("/add-song").post(
   verifyJWT,
@@ -54,7 +54,7 @@ router.route("/songid/:songId").get(verifyJWT, getSongById);
 router.route("/s/:songname").get(verifyJWT, getSongsByName);
 
 router
-  .route("/upade-song/:songId")
+  .route("/update-song/:songId")
   .patch(verifyJWT, upload.single("thumbnailUrl"), updateSong);
 
 router.route("/delete/songid/:songId").delete(verifyJWT, deleteSong);
