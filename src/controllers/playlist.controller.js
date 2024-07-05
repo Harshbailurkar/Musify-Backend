@@ -4,44 +4,59 @@ import { APIError } from "../utils/apiError.js";
 import { APIResponse } from "../utils/apiResponce.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Song } from "../models/song.model.js";
+
 const createPlaylist = asyncHandler(async (req, res) => {
   const { name } = req.body;
-  console.log("Request body:", req.body); // Debugging log
 
   if (!name || name.trim() === "") {
     throw new APIError(400, "Name is required");
   }
 
-  const playlistExist = await Playlist.findOne({ name });
-  if (playlistExist) {
-    throw new APIError(400, "Playlist already exists");
+  try {
+    // Check if a playlist with the same name exists for the user
+    const playlistExist = await Playlist.findOne({ name, owner: req.user._id });
+    if (playlistExist) {
+      throw new APIError(400, "Playlist with this name already exists");
+    }
+
+    // Create new playlist
+    const playlist = await Playlist.create({
+      name,
+      owner: req.user._id,
+    });
+
+    if (!playlist) {
+      throw new APIError(
+        500,
+        "There was a problem while creating the playlist"
+      );
+    }
+
+    return res
+      .status(200)
+      .json(
+        new APIResponse(200, playlist, "Playlist was created successfully")
+      );
+  } catch (error) {
+    // Catch any errors and handle duplicate key errors specifically
+    if (
+      error.code === 11000 &&
+      error.keyPattern &&
+      error.keyPattern.name === 1
+    ) {
+      throw new APIError(400, "Playlist with this name already exists");
+    }
+    throw new APIError(500, "Internal Server Error");
   }
-
-  const playList = new Playlist({
-    name,
-    owner: req.user._id,
-  });
-
-  await playList.save();
-  console.log("Created playlist:", playList); // Debugging log
-
-  if (!playList) {
-    throw new APIError(500, "There was a problem while creating the playlist");
-  }
-
-  return res
-    .status(200)
-    .json(new APIResponse(200, playList, "Playlist was created successfully"));
 });
 
 const getUserPlaylists = asyncHandler(async (req, res) => {
-  const { userId } = req.params;
-
+  const userId = req.user._id;
   if (!userId) {
-    throw new APIError(400, "Id is required");
+    throw new APIError(400, "User ID is required");
   }
 
-  const playlist = await Playlist.aggregate([
+  const playlists = await Playlist.aggregate([
     {
       $match: {
         owner: new mongoose.Types.ObjectId(userId),
@@ -50,9 +65,9 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
     {
       $lookup: {
         from: "songs",
-        localField: "song",
+        localField: "songs",
         foreignField: "_id",
-        as: "song",
+        as: "songs",
       },
     },
     {
@@ -74,7 +89,7 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new APIResponse(200, playlist, "Playlists returned successfully"));
+    .json(new APIResponse(200, playlists, "Playlists returned successfully"));
 });
 
 const getPlaylistById = asyncHandler(async (req, res) => {
@@ -82,10 +97,10 @@ const getPlaylistById = asyncHandler(async (req, res) => {
 
   // Validate the playlist ID
   if (!playlistId) {
-    throw new APIError(400, "Playlist Id is required");
+    throw new APIError(400, "Playlist ID is required");
   }
   if (!isValidObjectId(playlistId)) {
-    throw new APIError(400, "Playlist Id is invalid");
+    throw new APIError(400, "Playlist ID is invalid");
   }
 
   try {
@@ -115,8 +130,16 @@ const getPlaylistById = asyncHandler(async (req, res) => {
       {
         $addFields: {
           owner: {
-            $first: "$owner",
+            $arrayElemAt: ["$owner", 0], // Select the first element of the owner array
           },
+        },
+      },
+      {
+        $project: {
+          "owner.password": 0,
+          "owner._id": 0,
+          "owner.refreshToken": 0,
+          "owner.accessToken": 0,
         },
       },
     ]);
@@ -130,7 +153,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
     return res
       .status(200)
       .json(
-        new APIResponse(200, playlist[0], "Playlist is returned successfully")
+        new APIResponse(200, playlist[0], "Playlist returned successfully")
       );
   } catch (error) {
     console.error("Error fetching playlist:", error);
@@ -159,8 +182,7 @@ const addSongToPlaylist = asyncHandler(async (req, res) => {
   if (!song) {
     throw new APIError(404, "Song not found");
   }
-
-  playlist.songs.push(song._id);
+  playlist.songs.push(song);
   const updatedPlayList = await playlist.save();
 
   // Check if the playlist update was successful
@@ -226,8 +248,7 @@ const deletePlaylist = asyncHandler(async (req, res) => {
 const updatePlaylist = asyncHandler(async (req, res) => {
   const { playlistId } = req.params;
   const { name } = req.body;
-  console.log(playlistId);
-  console.log(name);
+
   if (!playlistId) {
     throw new APIError(400, "Playlist id is required");
   }
@@ -243,7 +264,7 @@ const updatePlaylist = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(
-      new APIResponse(200, updatePlaylist, "Playlist was updated successfully")
+      new APIResponse(200, updatedPlayList, "Playlist was updated successfully")
     );
 });
 

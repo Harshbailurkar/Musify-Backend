@@ -1,11 +1,11 @@
 import mongoose, { Schema } from "mongoose";
+import { v4 as uuidv4 } from "uuid";
 
 const playlistSchema = new Schema(
   {
     name: {
       type: String,
       required: true,
-      unique: true,
     },
     owner: {
       type: Schema.Types.ObjectId,
@@ -17,6 +17,11 @@ const playlistSchema = new Schema(
         ref: "Song",
       },
     ],
+    uuid: {
+      type: String,
+      default: uuidv4,
+      unique: true,
+    },
   },
   { timestamps: true }
 );
