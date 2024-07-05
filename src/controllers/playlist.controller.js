@@ -248,24 +248,50 @@ const deletePlaylist = asyncHandler(async (req, res) => {
 const updatePlaylist = asyncHandler(async (req, res) => {
   const { playlistId } = req.params;
   const { name } = req.body;
-
   if (!playlistId) {
-    throw new APIError(400, "Playlist id is required");
+    throw new APIError(400, "Playlist ID is required");
   }
-  if (name.trim() === "") {
+  if (!name || name.trim() === "") {
     throw new APIError(400, "Name is required");
   }
-  const updatedPlayList = await Playlist.findByIdAndUpdate(playlistId, {
-    name,
-  });
-  if (!updatedPlayList) {
-    throw new APIError(500, "There was a problem while updating the Playlist");
-  }
-  return res
-    .status(200)
-    .json(
-      new APIResponse(200, updatedPlayList, "Playlist was updated successfully")
+
+  try {
+    const existingPlaylist = await Playlist.findOne({
+      name,
+      owner: req.user._id,
+      _id: { $ne: playlistId },
+    });
+
+    if (existingPlaylist) {
+      throw new APIError(402, "Playlist with this name already exists");
+    }
+
+    const updatedPlaylist = await Playlist.findByIdAndUpdate(
+      playlistId,
+      { name },
+      { new: true }
     );
+
+    if (!updatedPlaylist) {
+      throw new APIError(
+        500,
+        "There was a problem while updating the playlist"
+      );
+    }
+
+    return res
+      .status(200)
+      .json(
+        new APIResponse(
+          200,
+          updatedPlaylist,
+          "Playlist was updated successfully"
+        )
+      );
+  } catch (error) {
+    console.error("Error updating playlist:", error);
+    throw new APIError(500, "Internal Server Error");
+  }
 });
 
 export {
