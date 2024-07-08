@@ -294,6 +294,67 @@ const updatePlaylist = asyncHandler(async (req, res) => {
   }
 });
 
+const moveSongToTop = asyncHandler(async (req, res) => {
+  const { playlistId, songId } = req.params;
+  if (!playlistId || !songId) {
+    throw new APIError(400, "Playlist Id and Song Id are required");
+  }
+  const playlist = await Playlist.findById(playlistId);
+  if (!playlist) {
+    throw new APIError(404, "Playlist not found");
+  }
+  const songIndex = playlist.songs.findIndex((item) => item.equals(songId));
+  if (songIndex === -1) {
+    throw new APIError(404, "Song not found in the playlist");
+  }
+  const song = playlist.songs[songIndex];
+  playlist.songs.splice(songIndex, 1);
+  playlist.songs.unshift(song);
+  const updatedPlaylist = await playlist.save();
+  if (!updatedPlaylist) {
+    throw new APIError(500, "There was a problem while updating the playlist");
+  }
+  return res
+    .status(200)
+    .json(
+      new APIResponse(
+        200,
+        updatedPlaylist,
+        "Song was moved to the top of the playlist"
+      )
+    );
+});
+
+const moveSongToBottom = asyncHandler(async (req, res) => {
+  const { playlistId, songId } = req.params;
+  if (!playlistId || !songId) {
+    throw new APIError(400, "Playlist Id and Song Id are required");
+  }
+  const playlist = await Playlist.findById(playlistId);
+  if (!playlist) {
+    throw new APIError(404, "Playlist not found");
+  }
+  const songIndex = playlist.songs.findIndex((item) => item.equals(songId));
+  if (songIndex === -1) {
+    throw new APIError(404, "Song not found in the playlist");
+  }
+  const song = playlist.songs[songIndex];
+  playlist.songs.splice(songIndex, 1);
+  playlist.songs.push(song);
+  const updatedPlaylist = await playlist.save();
+  if (!updatedPlaylist) {
+    throw new APIError(500, "There was a problem while updating the playlist");
+  }
+  return res
+    .status(200)
+    .json(
+      new APIResponse(
+        200,
+        updatedPlaylist,
+        "Song was moved to the bottom of the playlist"
+      )
+    );
+});
 export {
   createPlaylist,
   getUserPlaylists,
@@ -302,4 +363,6 @@ export {
   removeSongFromPlaylist,
   deletePlaylist,
   updatePlaylist,
+  moveSongToTop,
+  moveSongToBottom,
 };
