@@ -7,6 +7,8 @@ import {
   deletePlaylist,
   addSongToPlaylist,
   removeSongFromPlaylist,
+  moveSongToTop,
+  moveSongToBottom,
 } from "../controllers/playlist.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
@@ -27,5 +29,13 @@ router
 router.route("/update/:playlistId").patch(verifyJWT, updatePlaylist);
 
 router.route("/delete/:playlistId").delete(verifyJWT, deletePlaylist);
+
+router
+  .route("/move-to-top/:playlistId/:songId")
+  .patch(verifyJWT, moveSongToTop);
+
+router
+  .route("/move-to-bottom/:playlistId/:songId")
+  .patch(verifyJWT, moveSongToBottom);
 
 export default router;
