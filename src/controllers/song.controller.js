@@ -8,6 +8,7 @@ import {
 import { APIResponse } from "../utils/apiResponce.js";
 import { Like } from "../models/like.model.js";
 import { User } from "../models/user.model.js";
+
 const getAllSongs = asyncHandler(async (req, res) => {
   const { pageNo } = req.params;
   console.log(pageNo);
@@ -41,6 +42,7 @@ const publishASong = asyncHandler(async (req, res) => {
   if (typeof genre === "string") {
     genre = JSON.parse(genre);
   }
+  console.log(req.files);
   if (req.files?.songUrl === undefined) {
     throw new APIError("Song is Required", 400);
   }
@@ -53,7 +55,7 @@ const publishASong = asyncHandler(async (req, res) => {
     thumbnailLocalPath = req.files?.thumbnailUrl[0]?.path;
   }
   if (!songLocalPath) {
-    throw new APIError("Avtar Required", 400);
+    throw new APIError("Song Required", 404);
   }
   const song = await uploadOnCloudinary(songLocalPath);
 
@@ -175,17 +177,25 @@ const deleteSong = asyncHandler(async (req, res) => {
   if (!song) {
     throw new APIError(404, "Song Not Found");
   }
-  if (song.songUrl) {
-    await deleteImagefromCloudinary(song.songUrl);
+  if (song.owner !== req.user.username) {
+    throw new APIError(
+      402,
+      "Unauthorized request! you dont have permission to perform this action !"
+    );
   }
-  if (song.ThumbnailUrl) {
-    await deleteImagefromCloudinary(song.ThumbnailUrl);
-  }
+  if (song.owner === req.user.username) {
+    if (song.songUrl) {
+      await deleteImagefromCloudinary(song.songUrl);
+    }
+    if (song.ThumbnailUrl) {
+      await deleteImagefromCloudinary(song.ThumbnailUrl);
+    }
 
-  const deletedSong = await Song.findByIdAndDelete(songId);
-  await Like.deleteMany({ song: songId });
-  if (!deletedSong) {
-    throw new APIError(500, "Failed to delete song");
+    const deletedSong = await Song.findByIdAndDelete(songId);
+    await Like.deleteMany({ song: songId });
+    if (!deletedSong) {
+      throw new APIError(500, "Failed to delete song");
+    }
   }
 
   return res

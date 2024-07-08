@@ -71,7 +71,6 @@ const loginUser = asyncHandler(async (req, res, next) => {
   const user = await User.findOne({
     $or: [{ username: usernameOremail }, { email: usernameOremail }],
   });
-  console.log(user);
   if (!user) {
     throw new APIError(404, "User not found");
   }
@@ -221,15 +220,25 @@ const getCurrentUser = asyncHandler(async (req, res, next) => {
 const updateAccountDetails = asyncHandler(async (req, res, next) => {
   const { fullName, email } = req.body;
 
-  if (!fullName || !email) {
-    throw new APIError(400, "All fields are required");
+  if (!fullName && !email) {
+    throw new APIError(400, "Either fullName or email is required");
+  }
+
+  const updateFields = {};
+  if (fullName) {
+    updateFields.fullName = fullName;
+  }
+  if (email) {
+    updateFields.email = email;
   }
 
   const user = await User.findByIdAndUpdate(
     req.user?._id,
-    { $set: { fullName, email } },
+    { $set: updateFields },
     { new: true }
-  ).select("-password");
+  ).select("-password -refreshToken -accessToken");
+
+  // Handle user update response
 
   if (!user) {
     throw new APIError(404, "User not found");
@@ -241,14 +250,16 @@ const updateAccountDetails = asyncHandler(async (req, res, next) => {
 });
 
 const updateUserAvatar = asyncHandler(async (req, res, next) => {
-  const oldAvatar = req.user?.avatar;
-  if (!oldAvatar) {
-    throw new APIError(400, "Error while getting the avatar image");
-  }
+  if (req.user?.avatar) {
+    const oldAvatar = req.user?.avatar;
+    if (!oldAvatar) {
+      throw new APIError(400, "Error while getting the avatar image");
+    }
 
-  const deleteAvatar = await deleteImagefromCloudinary(oldAvatar);
-  if (!deleteAvatar) {
-    throw new APIError(400, "Error while deleting the old avatar");
+    const deleteAvatar = await deleteImagefromCloudinary(oldAvatar);
+    if (!deleteAvatar) {
+      throw new APIError(400, "Error while deleting the old avatar");
+    }
   }
 
   const avatarLocalPath = req.file?.path;

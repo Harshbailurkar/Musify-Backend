@@ -175,7 +175,7 @@ const addSongToPlaylist = asyncHandler(async (req, res) => {
 
   const songExist = playlist.songs.find((item) => item.toString() === songId);
   if (songExist) {
-    throw new APIError(400, "Song already exists in the playlist");
+    throw new APIError(401, "Song already exists in the playlist");
   }
 
   const song = await Song.findById(songId);
