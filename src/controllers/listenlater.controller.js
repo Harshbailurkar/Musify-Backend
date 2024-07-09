@@ -16,7 +16,7 @@ const addSongToListenLater = asyncHandler(async (req, res) => {
     listenLaterBy: req.user._id,
   });
   if (listenLaterExist) {
-    throw new APIError(400, "Song already exists in listen later");
+    throw new APIError(402, "Song already exists in listen later");
   }
 
   const listenLater = await ListenLater.create({
