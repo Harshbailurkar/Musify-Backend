@@ -9,6 +9,7 @@ import {
   removeSongFromPlaylist,
   moveSongToTop,
   moveSongToBottom,
+  getLatestThreePlaylist,
 } from "../controllers/playlist.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
@@ -37,5 +38,7 @@ router
 router
   .route("/move-to-bottom/:playlistId/:songId")
   .patch(verifyJWT, moveSongToBottom);
+
+router.route("/showLatest3Playlists").get(verifyJWT, getLatestThreePlaylist);
 
 export default router;

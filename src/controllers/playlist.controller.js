@@ -85,7 +85,7 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
         },
       },
     },
-  ]);
+  ]).sort({ updatedAt: -1 });
 
   return res
     .status(200)
@@ -175,7 +175,7 @@ const addSongToPlaylist = asyncHandler(async (req, res) => {
 
   const songExist = playlist.songs.find((item) => item.toString() === songId);
   if (songExist) {
-    throw new APIError(401, "Song already exists in the playlist");
+    throw new APIError(402, "Song already exists in the playlist");
   }
 
   const song = await Song.findById(songId);
@@ -355,6 +355,31 @@ const moveSongToBottom = asyncHandler(async (req, res) => {
       )
     );
 });
+
+const getLatestThreePlaylist = asyncHandler(async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const playlists = await Playlist.find({ owner: userId })
+      .sort({ updatedAt: -1 })
+      .limit(3)
+      .populate("songs");
+
+    if (!playlists) {
+      return res.status(404).json(new APIError(404, [], "No playlists found"));
+    }
+
+    return res
+      .status(200)
+      .json(new APIResponse(200, playlists, "Latest 3 playlists returned"));
+  } catch (error) {
+    console.error("Error fetching latest playlists:", error);
+    return res
+      .status(500)
+      .json(new APIError(500, null, "Internal Server Error"));
+  }
+});
+
 export {
   createPlaylist,
   getUserPlaylists,
@@ -365,4 +390,5 @@ export {
   updatePlaylist,
   moveSongToTop,
   moveSongToBottom,
+  getLatestThreePlaylist,
 };
