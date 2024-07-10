@@ -175,7 +175,7 @@ const addSongToPlaylist = asyncHandler(async (req, res) => {
 
   const songExist = playlist.songs.find((item) => item.toString() === songId);
   if (songExist) {
-    throw new APIError(402, "Song already exists in the playlist");
+    throw new APIError(409, "Song already exists in the playlist");
   }
 
   const song = await Song.findById(songId);
@@ -380,6 +380,21 @@ const getLatestThreePlaylist = asyncHandler(async (req, res) => {
   }
 });
 
+const seachPlaylistByName = asyncHandler(async (req, res) => {
+  const { name } = req.query;
+
+  if (!name) {
+    throw new APIError(400, "Name is required");
+  }
+  const playlists = await Playlist.find({
+    name: { $regex: name, $options: "i" },
+    owner: req.user._id,
+  }).populate("songs");
+  return res
+    .status(200)
+    .json(new APIResponse(200, playlists, "Playlists returned successfully"));
+});
+
 export {
   createPlaylist,
   getUserPlaylists,
@@ -391,4 +406,5 @@ export {
   moveSongToTop,
   moveSongToBottom,
   getLatestThreePlaylist,
+  seachPlaylistByName,
 };
