@@ -98,8 +98,8 @@ const loginUser = asyncHandler(async (req, res, next) => {
     .status(200)
     .cookie("accessToken", accessToken, tokenOptions)
     .cookie("refreshToken", refreshToken, tokenOptions)
-    .cookie("username", user.username, { sameSite: "Lax", path: "/" })
-    .cookie("userId", user._id.toString(), { sameSite: "Lax", path: "/" })
+    .cookie("username", user.username, { sameSite: "None", path: "/" })
+    .cookie("userId", user._id.toString(), { sameSite: "None", path: "/" })
     .json(
       new APIResponse(
         200,
@@ -122,7 +122,7 @@ const logoutUser = asyncHandler(async (req, res, next) => {
   const cookieOptions = {
     httpOnly: true,
     secure: true,
-    sameSite: "Lax",
+    sameSite: "None",
     path: "/",
   };
 
@@ -130,8 +130,8 @@ const logoutUser = asyncHandler(async (req, res, next) => {
     .status(200)
     .clearCookie("accessToken", cookieOptions)
     .clearCookie("refreshToken", cookieOptions)
-    .clearCookie("username", { sameSite: "Lax", path: "/" })
-    .clearCookie("userId", { sameSite: "Lax", path: "/" })
+    .clearCookie("username", { sameSite: "None", path: "/" })
+    .clearCookie("userId", { sameSite: "None", path: "/" })
     .json(new APIResponse(200, null, "User logged out successfully"));
 });
 
