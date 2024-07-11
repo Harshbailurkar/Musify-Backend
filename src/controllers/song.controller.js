@@ -339,7 +339,7 @@ const searchSongs = asyncHandler(async (req, res) => {
     ],
   };
 
-  const resultSongs = await Song.find(searchCriteria);
+  const resultSongs = await Song.find(searchCriteria).limit(100);
 
   const channels = await User.aggregate([
     {
