@@ -92,6 +92,7 @@ const loginUser = asyncHandler(async (req, res, next) => {
     secure: true,
     sameSite: "None",
     path: "/",
+    domain:"https://musifyharshbailurkar.netlify.app"
   };
 
   return res
@@ -124,14 +125,15 @@ const logoutUser = asyncHandler(async (req, res, next) => {
     secure: true,
     sameSite: "None",
     path: "/",
+    domain:"https://musifyharshbailurkar.netlify.app"
   };
 
   return res
     .status(200)
     .clearCookie("accessToken", cookieOptions)
     .clearCookie("refreshToken", cookieOptions)
-    .clearCookie("username", { sameSite: "None", path: "/" })
-    .clearCookie("userId", { sameSite: "None", path: "/" })
+    .clearCookie("username", cookieOptions)
+    .clearCookie("userId", cookieOptions)
     .json(new APIResponse(200, null, "User logged out successfully"));
 });
 
