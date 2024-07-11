@@ -119,7 +119,8 @@ const logoutUser = asyncHandler(async (req, res, next) => {
   }
 
   const cookieOptions = {
-   
+   httpOnly: true,
+    secure: true,
     sameSite: "None",
     path: "/",
     domain:"https://musifyharshbailurkar.netlify.app"
