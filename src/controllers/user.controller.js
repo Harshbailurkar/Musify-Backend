@@ -88,8 +88,6 @@ const loginUser = asyncHandler(async (req, res, next) => {
     .lean();
 
   const tokenOptions = {
-    httpOnly: true,
-    secure: true,
     sameSite: "None",
     path: "/",
     domain:"https://musifyharshbailurkar.netlify.app"
@@ -121,8 +119,7 @@ const logoutUser = asyncHandler(async (req, res, next) => {
   }
 
   const cookieOptions = {
-    httpOnly: true,
-    secure: true,
+   
     sameSite: "None",
     path: "/",
     domain:"https://musifyharshbailurkar.netlify.app"
