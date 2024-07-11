@@ -90,7 +90,7 @@ const loginUser = asyncHandler(async (req, res, next) => {
   const tokenOptions = {
     httpOnly: true,
     secure: true,
-    sameSite: "Lax",
+    sameSite: "None",
     path: "/",
   };
 

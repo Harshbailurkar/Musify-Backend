@@ -16,7 +16,7 @@ const getAllSongs = asyncHandler(async (req, res) => {
 
   // Paginate the results to show the first 10
   const page = parseInt(pageNo); // Assuming you want to show the first page
-  const limit = 10;
+  const limit = 20;
   const startIndex = (page - 1) * limit;
   const endIndex = page * limit;
   const paginatedSongs = songs.slice(startIndex, endIndex);
