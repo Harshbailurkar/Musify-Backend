@@ -88,17 +88,16 @@ const loginUser = asyncHandler(async (req, res, next) => {
     .lean();
 
   const tokenOptions = {
+    httpOnly: true,
+    secure: true,
     sameSite: "None",
     path: "/",
-    domain:"https://musifyharshbailurkar.netlify.app"
   };
 
   return res
     .status(200)
     .cookie("accessToken", accessToken, tokenOptions)
     .cookie("refreshToken", refreshToken, tokenOptions)
-    .cookie("username", user.username, tokenOptions)
-    .cookie("userId", user._id.toString(), tokenOptions)
     .json(
       new APIResponse(
         200,
@@ -119,19 +118,16 @@ const logoutUser = asyncHandler(async (req, res, next) => {
   }
 
   const cookieOptions = {
-   httpOnly: true,
+    httpOnly: true,
     secure: true,
     sameSite: "None",
     path: "/",
-    domain:"https://musifyharshbailurkar.netlify.app"
   };
 
   return res
     .status(200)
     .clearCookie("accessToken", cookieOptions)
     .clearCookie("refreshToken", cookieOptions)
-    .clearCookie("username", cookieOptions)
-    .clearCookie("userId", cookieOptions)
     .json(new APIResponse(200, null, "User logged out successfully"));
 });
 
