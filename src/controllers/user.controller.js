@@ -121,7 +121,6 @@ const logoutUser = asyncHandler(async (req, res, next) => {
     httpOnly: true,
     secure: true,
     sameSite: "None",
-    sameSite: "None",
     path: "/",
   };
 
@@ -156,7 +155,7 @@ const refreshAccessToken = asyncHandler(async (req, res, next) => {
     const tokenOptions = {
       httpOnly: true,
       secure: true,
-      sameSite: "Lax",
+      sameSite: "None",
       path: "/",
     };
 
