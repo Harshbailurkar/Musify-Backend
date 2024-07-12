@@ -1,7 +1,7 @@
 {
-  "name": "setup",
+  "name": "musify-backend",
   "version": "1.0.0",
-  "description": "setup of your backend filebase",
+  "description": "Backend for Musify web app",
   "type": "module",
   "main": "index.js",
   "scripts": {
@@ -15,10 +15,22 @@
     "music web app",
     "music app",
     "music",
-    "musify",
-    "Owner: Harsh bailurkar"
+    "musify"
   ],
   "author": "Harsh bailurkar",
+  "custom": {
+    "owner": "Harsh Bailurkar",
+    "social": {
+      "instagram": "harsh_bailurkar",
+      "github": "Harshbailurkar",
+      "linkedin": "harsh-bailurkar",
+      "website": "https://harshbailurkarportfolio.tech"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Harshbailurkar/Musify-Backend.git"
+  },
   "license": "ISC",
   "devDependencies": {
     "nodemon": "^3.0.2",
