@@ -33,7 +33,7 @@ const registerUser = asyncHandler(async (req, res, next) => {
   const { username, email, password, fullName } = req.body;
 
   if (!username || !email || !password || !fullName) {
-    throw new APIError(400, "Please provide all fields");
+    throw new APIError(402, "Please provide all fields");
   }
 
   const userExists = await User.findOne({ $or: [{ username }, { email }] });
@@ -61,8 +61,21 @@ const registerUser = asyncHandler(async (req, res, next) => {
   if (!createdUser) {
     throw new APIError(500, "Failed to create user");
   }
+  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+    createdUser._id
+  );
+  const tokenOptions = {
+    httpOnly: true,
+    secure: true,
+    sameSite: "None",
+    path: "/",
+  };
 
-  return res.status(201).json(new APIResponse(201, createdUser));
+  return res
+    .status(200)
+    .cookie("accessToken", accessToken, tokenOptions)
+    .cookie("refreshToken", refreshToken, tokenOptions)
+    .json(new APIResponse(201, createdUser));
 });
 
 const loginUser = asyncHandler(async (req, res, next) => {
