@@ -11,7 +11,6 @@ import { User } from "../models/user.model.js";
 
 const getAllSongs = asyncHandler(async (req, res) => {
   const { pageNo } = req.params;
-  console.log(pageNo);
   const songs = await Song.find();
 
   // Paginate the results to show the first 10
@@ -42,15 +41,12 @@ const publishASong = asyncHandler(async (req, res) => {
   if (typeof genre === "string") {
     genre = JSON.parse(genre);
   }
-  console.log(req.files);
   if (req.files?.songUrl === undefined) {
     throw new APIError("Song is Required", 400);
   }
   const songLocalPath = req.files?.songUrl[0]?.path;
 
   let thumbnailLocalPath = req.files?.thumbnailUrl;
-  console.log(thumbnailLocalPath);
-  console.log(thumbnailLocalPath !== undefined);
   if (thumbnailLocalPath !== undefined) {
     thumbnailLocalPath = req.files?.thumbnailUrl[0]?.path;
   }

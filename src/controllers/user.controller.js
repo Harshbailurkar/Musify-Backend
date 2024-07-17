@@ -80,7 +80,6 @@ const registerUser = asyncHandler(async (req, res, next) => {
 
 const loginUser = asyncHandler(async (req, res, next) => {
   const { usernameOremail, password } = req.body;
-  console.log(usernameOremail, password);
   const user = await User.findOne({
     $or: [{ username: usernameOremail }, { email: usernameOremail }],
   });
