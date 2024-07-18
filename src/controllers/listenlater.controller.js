@@ -1,5 +1,4 @@
 import { ListenLater } from "../models/listenlater.model.js";
-import { Song } from "../models/song.model.js";
 import { APIError } from "../utils/apiError.js";
 import { APIResponse } from "../utils/apiResponce.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -67,20 +66,14 @@ const removeSongToListenLater = asyncHandler(async (req, res) => {
 });
 
 const getListenLaterSongs = asyncHandler(async (req, res) => {
-  console.log("User ID:", req.user._id);
-
   const listenLaterEntries = await ListenLater.find({
     listenLaterBy: req.user._id,
     song: { $exists: true },
   }).populate("song");
 
-  console.log("All Listen Later Entries:", listenLaterEntries);
-
   const listenLaterSongs = listenLaterEntries.reduce((acc, entry) => {
     return acc.concat(entry.song);
   }, []);
-
-  console.log("Listen Later Songs:", listenLaterSongs);
 
   return res
     .status(200)
