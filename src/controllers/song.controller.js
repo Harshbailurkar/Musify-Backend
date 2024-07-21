@@ -11,22 +11,25 @@ import { User } from "../models/user.model.js";
 
 const getAllSongs = asyncHandler(async (req, res) => {
   const { pageNo } = req.params;
-  const songs = await Song.find();
-
-  // Paginate the results to show the first 10
-  const page = parseInt(pageNo); // Assuming you want to show the first page
-  const limit = 20;
+  const page = parseInt(pageNo) || 1; // Default to page 1 if pageNo is not provided
+  const limit = 24;
   const startIndex = (page - 1) * limit;
-  const endIndex = page * limit;
-  const paginatedSongs = songs.slice(startIndex, endIndex);
+
+  // Fetch paginated results directly from the database using skip, limit, and sort
+  const songs = await Song.find()
+    .sort({ likesCount: -1 }) // Sort by likesCount in descending order
+    .skip(startIndex)
+    .limit(limit);
+  const songCount = await Song.countDocuments(); // Get the total number of songs
 
   return res
     .status(200)
     .json(
       new APIResponse(
         200,
-        paginatedSongs,
-        `First 10 songs on page ${pageNo} fetched successfully`
+        songs,
+        songCount,
+        `Songs on page ${page} fetched successfully`
       )
     );
 });
