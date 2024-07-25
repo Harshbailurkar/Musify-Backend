@@ -312,7 +312,6 @@ const followUser = asyncHandler(async (req, res) => {
       following: channelId,
     });
     await follow.save();
-    console.log(`User ${followerId} is now following user ${channelId}`);
     return res
       .status(200)
       .json(new APIResponse(200, {}, "User followed successfully"));
@@ -337,8 +336,6 @@ const unfollowUser = asyncHandler(async (req, res) => {
     if (!result.deletedCount) {
       throw new APIError(400, "User is not following this channel/user");
     }
-
-    console.log(`User ${followerId} unfollowed user ${channelId}`);
     return res
       .status(200)
       .json(new APIResponse(200, {}, "User unfollowed successfully"));
@@ -416,14 +413,11 @@ const getUserProfile = asyncHandler(async (req, res) => {
 });
 const getFollowedAccounts = async (req, res) => {
   try {
-    const userId = req.user._id; // Assuming the user ID is available in req.user
-
-    // Find the documents where the user is following others
+    const userId = req.user._id;
     const followedAccounts = await Following.find({
       followers: userId,
     }).populate("following");
 
-    // Extract the followed user information
     const followedUsers = followedAccounts.map((account) => account.following);
 
     res.json({ followedUsers });
