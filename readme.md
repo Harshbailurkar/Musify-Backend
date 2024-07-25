@@ -1,4 +1,4 @@
-
+Live at : https://musifyharshbailurkar.netlify.app or https://mysify.studio
 # Musify
 
 Musify is a comprehensive backend API for an online music web application. This project enables users to listen to high-quality songs, search for songs by name, artist, genre, or language, upload their own songs, like songs, create, manage, and edit playlists, share playlists, follow artists, add songs to listen later, and access live radio channels.
