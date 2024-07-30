@@ -5,9 +5,10 @@ import {
   uploadOnCloudinary,
   deleteImagefromCloudinary,
 } from "../utils/cloudinary.js";
-import { APIResponse } from "../utils/apiResponce.js"; // Corrected import
+import { APIResponse } from "../utils/apiResponce.js";
 import jwt from "jsonwebtoken";
 import Following from "../models/Following.model.js";
+import { AccessToken } from "livekit-server-sdk";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -428,6 +429,50 @@ const getFollowedAccounts = async (req, res) => {
       .json({ message: "Server error while fetching followed accounts" });
   }
 };
+export const getUserById = async (id) => {
+  try {
+    const user = await User.findById(id);
+    return user;
+  } catch (err) {
+    console.error(err);
+  }
+};
+export const createViewerToken = async (req, res) => {
+  try {
+    const hostId = req.params.hostId.toString();
+    const userId = req.user._id.toString();
+
+    if (userId) {
+      const host = await getUserById(hostId);
+      if (!host) {
+        throw new Error("host not found");
+      }
+
+      const isHost = hostId === userId;
+      const viewerToken = new AccessToken(
+        process.env.LIVEKIT_API_KEY,
+        process.env.LIVEKIT_API_SECRET,
+        {
+          identity: isHost ? `host-${hostId}` : userId,
+        }
+      );
+
+      viewerToken.addGrant({
+        room: hostId,
+        roomJoin: true,
+        canPublish: false,
+        canPublishData: true,
+      });
+      const codedToken = await viewerToken.toJwt();
+      return res.status(200).json({ token: codedToken });
+    } else {
+      throw new Error("login required");
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+
 export {
   registerUser,
   loginUser,

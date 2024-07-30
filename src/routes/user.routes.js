@@ -12,46 +12,32 @@ import {
   followUser,
   unfollowUser,
   getFollowedAccounts,
-  // getLikedSongs,
+  createViewerToken,
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
-
-router.route("/register").post(
-  upload.fields([
-    {
-      name: "avatar",
-      maxCount: 1,
-    },
-    {
-      name: "coverImage",
-      maxCount: 1,
-    },
-  ]),
-  registerUser
-);
+//Public Routes
+router.route("/register").post(registerUser);
 router.route("/login").post(loginUser);
 
 //secured Routes
 router.route("/logout").post(verifyJWT, logoutUser);
-
 router.route("/refresh-token").post(refreshAccessToken);
-
 router.route("/change-password").post(verifyJWT, changeCurrentPassword);
-
 router.route("/current-user").get(verifyJWT, getCurrentUser);
-
 router.route("/update-account").patch(verifyJWT, updateAccountDetails);
-
 router
   .route("/change-avatar")
   .patch(verifyJWT, upload.single("avatar"), updateUserAvatar);
-
+//channel routes
 router.route("/c/:username").get(verifyJWT, getUserProfile);
 router.post("/follow/:channelId", verifyJWT, followUser);
 router.post("/unfollow/:channelId", verifyJWT, unfollowUser);
 router.get("/followed-channels", verifyJWT, getFollowedAccounts);
-// router.route("/likedsongs").get(verifyJWT, getLikedSongs);
+
+//stream routes
+router.route("/createvtoken/:hostId").post(verifyJWT, createViewerToken);
+
 export default router;
