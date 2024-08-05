@@ -76,6 +76,7 @@ const registerUser = asyncHandler(async (req, res, next) => {
     .status(200)
     .cookie("accessToken", accessToken, tokenOptions)
     .cookie("refreshToken", refreshToken, tokenOptions)
+    .cookie("userId", createdUser._id, tokenOptions)
     .json(new APIResponse(201, createdUser));
 });
 
@@ -111,6 +112,7 @@ const loginUser = asyncHandler(async (req, res, next) => {
     .status(200)
     .cookie("accessToken", accessToken, tokenOptions)
     .cookie("refreshToken", refreshToken, tokenOptions)
+    .cookie("userId", user._id, tokenOptions)
     .json(
       new APIResponse(
         200,
@@ -294,6 +296,38 @@ const updateUserAvatar = asyncHandler(async (req, res, next) => {
     .status(200)
     .json(new APIResponse(200, user, "Avatar updated successfully"));
 });
+const updateUserCoverPhoto = asyncHandler(async (req, res, next) => {
+  if (req.user?.coverPhoto) {
+    const oldCoverPhoto = req.user?.coverPhoto;
+    if (!oldCoverPhoto) {
+      throw new APIError(400, "Error while getting the cover photo");
+    }
+    const deleteCoverPhoto = await deleteImagefromCloudinary(oldCoverPhoto);
+    if (!deleteCoverPhoto) {
+      throw new APIError(400, "Error while deleting the old cover photo");
+    }
+  }
+  const coverPhotoLocalPath = req.file?.path;
+  if (!coverPhotoLocalPath) {
+    throw new APIError(400, "Cover photo file not found");
+  }
+  const newCoverPhoto = await uploadOnCloudinary(coverPhotoLocalPath);
+  if (!newCoverPhoto.url) {
+    throw new APIError(400, "Error while updating cover photo");
+  }
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    { $set: { coverPhoto: newCoverPhoto.url } },
+    { new: true }
+  );
+  if (!user) {
+    throw new APIError(404, "User not found");
+  }
+
+  return res
+    .status(200)
+    .json(new APIResponse(200, user, "Cover photo updated successfully"));
+});
 
 const followUser = asyncHandler(async (req, res) => {
   const { channelId } = req.params;
@@ -398,6 +432,7 @@ const getUserProfile = asyncHandler(async (req, res) => {
         followerCount: 1,
         followingCount: 1,
         isFollowed: 1,
+        coverPhoto: 1,
       },
     },
   ]);
@@ -472,6 +507,52 @@ export const createViewerToken = async (req, res) => {
     console.error(err);
   }
 };
+const getMostFollowedChannels = asyncHandler(async (req, res) => {
+  try {
+    const channels = await Following.aggregate([
+      {
+        $group: {
+          _id: "$following",
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "channel",
+        },
+      },
+      {
+        $sort: { count: -1 },
+      },
+      {
+        $limit: 6,
+      },
+      {
+        $project: {
+          _id: 0,
+          channelId: "$_id",
+          channelUsername: { $arrayElemAt: ["$channel.username", 0] },
+          channelName: { $arrayElemAt: ["$channel.fullName", 0] },
+          channelAvatar: { $arrayElemAt: ["$channel.avatar", 0] },
+          followerCount: "$count",
+        },
+      },
+    ]);
+
+    return res
+      .status(200)
+      .json(new APIResponse(200, channels, "Most followed channels fetched"));
+  } catch (error) {
+    console.error("Error fetching most followed channels:", error);
+    throw new APIError(
+      error.status || 500,
+      error.message || "Failed to get most followed channels"
+    );
+  }
+});
 
 export {
   registerUser,
@@ -486,4 +567,6 @@ export {
   unfollowUser,
   getUserProfile,
   getFollowedAccounts,
+  getMostFollowedChannels,
+  updateUserCoverPhoto,
 };

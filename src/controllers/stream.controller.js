@@ -6,6 +6,7 @@ import {
   uploadOnCloudinary,
   deleteImagefromCloudinary,
 } from "../utils/cloudinary.js";
+import mongoose from "mongoose";
 export const createStream = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -77,6 +78,69 @@ export const getLiveStreams = async (req, res) => {
           "all live stream fetched sucessfully "
         )
       );
+  } catch (error) {
+    throw new APIError("network or server not responding");
+  }
+};
+export const getStreamById = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    if (!userId) {
+      throw new APIError(401, "login required");
+    }
+    const stream = await Streams.findOne({ userId })
+      .select("-serverUrl -streamKey -ingressId")
+      .populate("userId", "username avatar");
+    if (!stream) {
+      throw new APIError(404, "stream not found");
+    }
+    return res
+      .status(200)
+      .json(new APIResponse(200, stream, "stream fetched sucessfully"));
+  } catch (error) {
+    throw new APIError("network or server not responding");
+  }
+};
+export const getUserPaidStreams = async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user) return res.status(404).json({ error: "User not found" });
+    res.json(user.payments);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+export const getUserStream = async (req, res) => {
+  const { userId } = req.params;
+  if (!userId) {
+    throw new APIError(401, "login required");
+  }
+  const stream = await Streams.findOne({ userId }).select(
+    "-serverUrl -streamKey -ingressId"
+  );
+  return res
+    .status(200)
+    .json(new APIResponse(200, stream, "stream fetched sucessfully"));
+};
+export const stopStream = async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    if (!userId) {
+      throw new APIError(404, "stream Not Found");
+    }
+    const streamerObjectId = new mongoose.Types.ObjectId(userId);
+    await User.updateMany(
+      {},
+      {
+        $pull: {
+          payments: { userId: streamerObjectId },
+        },
+      }
+    );
+    return res
+      .status(200)
+      .json(new APIResponse(200, "stream stopped sucessfully"));
   } catch (error) {
     throw new APIError("network or server not responding");
   }

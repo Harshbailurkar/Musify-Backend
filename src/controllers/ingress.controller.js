@@ -6,7 +6,7 @@ import {
   RoomServiceClient,
   TrackSource,
 } from "livekit-server-sdk";
-
+import { APIError } from "../utils/apiError.js";
 import { User } from "../models/user.model.js";
 import { Streams } from "../models/streams.model.js";
 
@@ -41,12 +41,12 @@ export const createIngress = async (req, res) => {
   try {
     const userId = req.user._id;
     if (!userId) {
-      return res.status(400).json({ message: "User not authenticated" });
+      throw new APIError(401, "login required");
     }
 
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      throw new APIError(401, "login required");
     }
 
     await resetIngresses(user._id.toString());

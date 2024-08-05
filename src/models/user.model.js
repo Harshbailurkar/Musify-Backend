@@ -36,6 +36,18 @@ const userSchema = new Schema(
     avatar: {
       type: String,
     },
+    coverPhoto: {
+      type: String,
+    },
+    payments: [
+      {
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+      },
+    ],
   },
   {
     timestamps: true,
