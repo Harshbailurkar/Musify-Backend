@@ -138,6 +138,11 @@ export const stopStream = async (req, res) => {
         },
       }
     );
+    await Streams.findOneAndUpdate(
+      { userId: userId },
+      { isLive: false },
+      { new: true }
+    );
     return res
       .status(200)
       .json(new APIResponse(200, "stream stopped sucessfully"));

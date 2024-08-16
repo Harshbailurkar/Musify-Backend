@@ -489,6 +489,7 @@ export const createViewerToken = async (req, res) => {
         process.env.LIVEKIT_API_SECRET,
         {
           identity: isHost ? `host-${hostId}` : userId,
+          name: req.user.username,
         }
       );
 

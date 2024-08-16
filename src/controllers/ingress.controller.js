@@ -50,7 +50,7 @@ export const createIngress = async (req, res) => {
     }
 
     await resetIngresses(user._id.toString());
-
+    console.log(user);
     const ingressOptions = {
       name: user.username,
       roomName: user._id.toString(),
