@@ -11,12 +11,15 @@ import {
   moveSongToBottom,
   getLatestThreePlaylist,
   seachPlaylistByName,
+  getResentPlaylists,
 } from "../controllers/playlist.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
 router.route("/").get(verifyJWT, getUserPlaylists);
+
+router.route("/recent").get(verifyJWT, getResentPlaylists);
 
 router.route("/create").post(verifyJWT, createPlaylist);
 

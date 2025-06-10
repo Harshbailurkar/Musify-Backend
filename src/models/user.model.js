@@ -48,6 +48,19 @@ const userSchema = new Schema(
         },
       },
     ],
+    recentlyPlayed: [
+      {
+        songId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Song",
+          required: true,
+        },
+        playedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

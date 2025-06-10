@@ -395,6 +395,21 @@ const seachPlaylistByName = asyncHandler(async (req, res) => {
     .json(new APIResponse(200, playlists, "Playlists returned successfully"));
 });
 
+const getResentPlaylists = asyncHandler(async (req, res) => {
+  // get 3 resently visited/played playlists
+  const playlists = await Playlist.find({ owner: req.user._id })
+    .sort({ updatedAt: -1 })
+    .limit(3)
+    .populate("songs");
+
+  if (!playlists) {
+    return res.status(404).json(new APIError(404, [], "No playlists found"));
+  }
+  return res
+    .status(200)
+    .json(new APIResponse(200, playlists, "Latest 3 playlists returned"));
+});
+
 export {
   createPlaylist,
   getUserPlaylists,
@@ -407,4 +422,5 @@ export {
   moveSongToBottom,
   getLatestThreePlaylist,
   seachPlaylistByName,
+  getResentPlaylists,
 };

@@ -95,6 +95,28 @@ const publishASong = asyncHandler(async (req, res) => {
 
 const getSongById = asyncHandler(async (req, res) => {
   const { songId } = req.params;
+  const MAX_RECENT_SONGS = 10;
+  const userId = req.user?._id;
+
+  if (!userId) {
+    throw new APIError(401, "Unauthorized request");
+  }
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new APIError(404, "User not found");
+  }
+  user.recentlyPlayed = user.recentlyPlayed.filter(
+    (entry) => entry.songId.toString() !== songId
+  );
+  user.recentlyPlayed.unshift({ songId, playedAt: new Date() });
+
+  if (user.recentlyPlayed.length > MAX_RECENT_SONGS) {
+    user.recentlyPlayed = user.recentlyPlayed.slice(0, MAX_RECENT_SONGS);
+  }
+
+  await user.save();
+
   if (!songId?.trim()) {
     throw new APIError(400, "songId is missing");
   }
@@ -106,6 +128,41 @@ const getSongById = asyncHandler(async (req, res) => {
     .status(200)
     .json(new APIResponse(200, song, "songs with name fetch successfully"));
 });
+
+const getRecentPlayedSongs = asyncHandler(async (req, res) => {
+  const userId = req.user?._id;
+  if (!userId) {
+    throw new APIError(401, "Unauthorized request");
+  }
+  const user = await User.findById(userId).populate("recentlyPlayed.songId");
+
+  if (!user) {
+    throw new APIError(404, "User not found");
+  }
+
+  // only send 5 songs
+  const MAX_RECENT_SONGS = 5;
+
+  const recentSongs = user.recentlyPlayed
+    .slice(0, MAX_RECENT_SONGS)
+    .sort((a, b) => b.playedAt - a.playedAt)
+    .map((entry) => entry.songId);
+
+  if (!recentSongs.length) {
+    throw new APIError(404, "No recently played songs found");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new APIResponse(
+        200,
+        recentSongs,
+        "Recently played songs fetched successfully"
+      )
+    );
+});
+
 const getSongsByName = asyncHandler(async (req, res) => {
   const { songname } = req.params;
   if (!songname?.trim()) {
@@ -402,6 +459,21 @@ const searchSongs = asyncHandler(async (req, res) => {
     );
 });
 
+const HomeSongs = asyncHandler(async (req, res) => {
+  const songs = await Song.find()
+    .sort({ likesCount: -1, createdAt: -1 })
+    .limit(5);
+
+  if (!songs.length) {
+    throw new APIError(404, "Songs Not Found");
+  }
+  return res
+    .status(200)
+    .json(
+      new APIResponse(200, songs, "Recently added songs fetched successfully")
+    );
+});
+
 export {
   getAllSongs,
   publishASong,
@@ -417,4 +489,6 @@ export {
   getSongByOwner,
   getSongByMostLiked,
   searchSongs,
+  HomeSongs,
+  getRecentPlayedSongs,
 };

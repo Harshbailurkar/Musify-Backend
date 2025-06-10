@@ -14,6 +14,8 @@ import {
   getSongByOwner,
   getSongByMostLiked,
   searchSongs,
+  HomeSongs,
+  getRecentPlayedSongs,
 } from "../controllers/song.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
@@ -32,6 +34,11 @@ router.route("/album/:album").get(verifyJWT, getSongByAlbum);
 router.route("/artist/:artist").get(verifyJWT, getSongByArtist);
 
 router.route("/owner/:owner").get(verifyJWT, getSongByOwner);
+
+router.route("/song-home").get(verifyJWT, HomeSongs);
+
+router.route("/recently-played").get(verifyJWT, getRecentPlayedSongs);
+
 router.route("/:pageNo").get(verifyJWT, getAllSongs);
 
 router.route("/add-song").post(

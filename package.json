@@ -5,7 +5,6 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js",
     "start": "node -r dotenv/config  src/index.js"
   },
@@ -15,7 +14,10 @@
     "music web app",
     "music app",
     "music",
-    "musify"
+    "musify",
+    "Musify",
+    "Spotify",
+    "harsh bailurkar"
   ],
   "author": "Harsh bailurkar",
   "custom": {
